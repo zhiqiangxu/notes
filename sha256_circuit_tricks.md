@@ -32,6 +32,8 @@ The properties of "spread integer" include:
     2. $a \oplus b \oplus c = EvenBits(spread(a) + spread(b) + spread(c))$, we'll refer to this as `P2`.
     3. $(a \land b) \oplus (b \land c) \oplus (a \land c) = OddBits(spread(a) + spread(b) + spread(c))$, we'll refer to this as `P5`.
         1. This may not look so obvious at the 1st glance, unless you notice this: the i-th bit of the result is `1` iff at least two bits of $A_i/B_i/C_i$ is `1`.
+    4. $(a \land b) \oplus ((!a) \land c) = OddBits(spread(a) + spread(b)) + OddBits(spread(!a) + spread(c))$, we'll refer to this as `P6`.
+        1. This may not look so obvious at the 1st glance, unless you notice this: the i-th bit of $OddBits(spread(a) + spread(b))$ and $OddBits(spread(!a) + spread(c))$ can not be both `1`, because the i-th bit of $a$ and $!a$ cant not be both `1`.
 2. $\forall a,b \in [0, 2^{32}), a \land b = OddBits(spread(a) + spread(b))$, we'll refer to this as `P3`.
 3. $\forall v \in \mathbb{Z^{+}}, v = spread(EvenBits(v)) + 2 spread(OddBits(v))$, we'll refer to this as `P4`.
 
@@ -77,9 +79,8 @@ With these in mind, let's dive into the details.
         1. Needs to decompose into 16 bit parts first.
     2. Compute $p' = e' + f', q'=spread(2^{32}-1) - e' + g'$,
     3. Decompose $p'$ into **sufficiently** constrained even and odd bits $p'^{odd}/p'^{even}$ using similar tricks as $s_0$. Similar for $q'$.
-    4. According to `P3`, $ch = p'^{odd} \oplus q'^{odd}$, apply `P1`, thus $ch = EvenBits(spread(p'^{odd}) + spread(q'^{odd}))$
-    5. Use similar tricks as $s_0$.
-    6. $\mathbb{qed}$
+    4. According to `P6`, $ch = p'^{odd} + q'^{odd}$
+    5. $\mathbb{qed}$
 4. $maj = (a \land b) \oplus (a \land c) \oplus (b \land c)$
     1. Lookup $a/b/c$ in the spread table to get **sufficiently** constrained $a'/b'/c'$
         1. Needs to decompose into 16 bit parts first.
