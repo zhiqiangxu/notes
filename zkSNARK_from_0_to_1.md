@@ -10,11 +10,9 @@ zkSNARK is short for zero knowledge succinct non-interactive arguments of knowle
 	3. sample random s, $ρ_l$, $ρ_r$, $α_l$, $α_r$, $α_o$, β, γ
 	4. set $ρ_o = ρ_l * ρ_r$ and the operand generators $g_l = g^{p_l}$, $g_r = g^{p_r}$, $g_o = g^{p_o}$
 	5. set the proving key:
-		$$\left( \{g^{s^k}\}_{k\in[d]}, \{g_l^{l_i(s)}, g_r^{r_i(s)}, g_o^{o_i(s)}\}_{i\in\{0,...,n\}}, \\
-		\{g_l^{α_{l}l_i(s)}, g_r^{α_{r}r_i(s)}, g_o^{α_{o}o_i(s)}, g_l^{βl_i(s)}g_r^{βr_i(s)}g_o^{βo_i(s)}\}_{i\in\{m+1,...,n\}}, \\
-		g_l^{t(s)}, g_r^{t(s)}, g_o^{t(s)}, g_l^{α_{l}t(s)}, g_r^{α_{r}t(s)}, g_o^{α_{o}t(s)}, g_l^{βt(s)}, g_r^{βt(s)}, g_o^{βt(s)}  \right)$$
+		$$\left( \{g^{s^k}\}_{k\in[d]}, \{g_l^{l_i(s)}, g_r^{r_i(s)}, g_o^{o_i(s)}\}_{i\in\{0,...,n\}}, \{g_l^{α_{l}l_i(s)}, g_r^{α_{r}r_i(s)}, g_o^{α_{o}o_i(s)}, g_l^{βl_i(s)}g_r^{βr_i(s)}g_o^{βo_i(s)}\}_{i\in\{m+1,...,n\}}, g_l^{t(s)}, g_r^{t(s)}, g_o^{t(s)}, g_l^{α_{l}t(s)}, g_r^{α_{r}t(s)}, g_o^{α_{o}t(s)}, g_l^{βt(s)}, g_r^{βt(s)}, g_o^{βt(s)}  \right)$$
 	6. set the verification key:
-		$$\left( g^1, g_o^t(s), \{g_l^{l_i(s)}, g_r^{r_i(s)}, g_o^{o_i(s)} \}_{i\in\{0,...,m\}}, g^{α_{l}}, g^{α_{r}}, g^{α_{o}}, g^γ, g^{βγ} \right)$$
+		$$\left( g^1, g_o^{t(s)}, \{g_l^{l_i(s)}, g_r^{r_i(s)}, g_o^{o_i(s)} \}_{i\in\{0,...,m\}}, g^{α_{l}}, g^{α_{r}}, g^{α_{o}}, g^γ, g^{βγ} \right)$$
 2. Proving
 	1. for the input u, execute the computation of f(u) obtaining values $\{v_i\}_{i\in\{m+1,...,n\}}$ for all the itermediary variables
 	2. assign all values to the unencrypted variable polynomials $L(x)=l_0(x) + \sum_{i=1}^{n} v_i*l_i(x)$, and similarly R(x), O(x)
@@ -90,16 +88,14 @@ In detail:
 1. Setup
 	1. sample random s, $α_l$, $α_r$, $α_o$, $β_l$, $β_r$, $β_o$
 	2. set the proving key: 
-		$$\left( \{g^{s^k}\}_{k\in[d]}, \{g^{l_i(s)}, g^{r_i(s)}, g^{o_i(s)}\}_{i\in\{0,...,n\}}, \\
-		\{g^{α_{l}l_i(s)}, g^{α_{r}r_i(s)}, g^{α_{o}o_i(s)}, g^{β_ll_i(s)}g^{β_rr_i(s)}g^{β_oo_i(s)}\}_{i\in\{0,...,n\}}, \\
-		\right)$$
+		$$\left( \{g^{s^k}\}_{k\in[d]}, \{g^{l_i(s)}, g^{r_i(s)}, g^{o_i(s)}\}_{i\in\{0,...,n\}}, \{g^{α_{l}l_i(s)}, g^{α_{r}r_i(s)}, g^{α_{o}o_i(s)}, g^{β_ll_i(s)}g^{β_rr_i(s)}g^{β_oo_i(s)}\}_{i\in\{0,...,n\}}\right)$$
 	3. set the verification key:
-		$$\left( g^t(s), g^{α_l}, g^{α_r}, g^{α_o}, g^{β_l}, g^{β_r}, g^{β_o}\right)$$
+		$$\left( g^{t(s)}, g^{α_l}, g^{α_r}, g^{α_o}, g^{β_l}, g^{β_r}, g^{β_o}\right)$$
 2. Proving:
 	1. for the input u, execute the computation of f(u) obtaining values $\{v_i\}_{i\in\{m+1,...,n\}}$ for all the itermediary variables
 	2. assign all values to the unencrypted variable polynomials $L(x)=l_0(x) + \sum_{i=1}^{n} v_i*l_i(x)$, and similarly R(x), O(x)
 	3. find $h(x) = \frac{L(x)R(x)-O(x)}{t(x)}$
-	4. assign the prover’s variable values to the encrypted variable polynomials and apply zero-knowledge δ-shift $g^{L(s)} = \prod_{i=0}^{n} \left(g_l^{l_i(s)}\right)^{v_i}$ and similarly $g^{R(s)}, g^{O(s)}$
+	4. assign the prover’s variable values to the encrypted variable polynomials and apply zero-knowledge δ-shift $g^{L(s)} = \prod_{i=0}^{n} \left(g^{l_i(s)}\right)^{v_i}$ and similarly $g^{R(s)}, g^{O(s)}$
 	5. assign its α-shifted pairs $g^{L'(s)} = \prod_{i=0}^{n} \left(g^{α_ll_i(s)}\right)^{v_i}$ and similarly $g^{R'(s)}, g^{O'(s)}$
 	6. assign the variable values consistency polynomials $$g^{Z(s)} = \prod_{i=0}^{n} \left( g^{β_ll_i(s)} g^{β_rr_i(s)} g^{β_oo_i(s)} \right)^{v_i} $$
 	7. compute the proof $\left( g^{L(s)}, g^{R(s)}, g^{O(s)}, g^{h(s)}, g^{L'(s)}, g^{R'(s)}, g^{O'(s)}, g^{Z(s)} \right)$
