@@ -19,7 +19,7 @@ So the key point is to understand why the minimum hamming distance is `n-k+1` fo
 
 It's not hard to see both variants are [linear code](https://en.wikipedia.org/wiki/Linear_code).
 
-For `The original view`, it's trivial since for two polynomial of degree less than `k`, they can have at most `k-1` common evaluations, which means they have at least `n-k+1` different evaluations, thus the minimum hamming distance is at least `n-k+1`. As the [Singleton boundary](https://en.wikipedia.org/wiki/Singleton_bound) of linear code is at most `n-k+1`, the minimum hamming distance can only be `n-k+1`.
+For `The original view`, it's trivial since for two polynomial of degree less than `k`, they can have at most `k-1` common evaluations, which means they have at least `n-k+1` different evaluations, thus the minimum hamming distance is at least `n-k+1`. As the [Singleton bound](https://en.wikipedia.org/wiki/Singleton_bound) of linear code is at most `n-k+1`, the minimum hamming distance can only be `n-k+1`.
 
 For `The BCH view`, since it's also linear code, we only need to prove the minimum weight of nonzero code is `n-k+1`. 
 
