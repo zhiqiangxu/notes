@@ -132,7 +132,72 @@ There is another underlying issue here, which is that the settlement results nee
 However, this does not pose a problem because the older validators have not exited and will continue to vote and receive rewards. The votes of the new validators will also be included by the older validators and they will receive rewards as well. Eventually, both the cross-chain contract and the governance contract will be updated to a consistent result.
 
 ## zkSNARK
-(in progress)
+
+We use poseidon hash to commit each validator's public key and voting power:
+
+```rust
+validators_hash = PoseidonHash(validator_pk_1, power_1, validator_pk_2, power_2, ..., validator_pk_1024, power_1024)
+```
+
+If the number of validators is less than 1024, zero values are used instead.
+
+The onchain part is:
+
+```solidity
+// verify whether 2/3+ voting power voted for msg_hash
+function verifyMultiSigSingle(bytes32 validators_hash, bytes32 msg_hash, bytes proof) returns (bool)
+// batch verification for 2 instances
+function verifyMultiSigBatch2(bytes32 validators_hash, bytes32[2] msg_hashes, bytes proof) returns (bool)
+// batch verification for 4 instances
+function verifyMultiSigBatch4(bytes32 validators_hash, bytes32[4] msg_hashes, bytes proof) returns (bool)
+// batch verification for 8 instances
+function verifyMultiSigBatch8(bytes32 validators_hash, bytes32[8] msg_hashes, bytes proof) returns (bool)
+```
+
+The core parts of offchain circuit is `hash_to_curve` and `bls_signature_aggregate_verify`.
+
+The circuit for the `hash_to_curve`, as described in Section 3: "Encoding Byte Strings to Elliptic Curves" of [IETF RFC 9380](https://datatracker.ietf.org/doc/rfc9380/), implements the conversion of a message to a point on the G2 group of the BN254 curve.
+
+More specifically,
+
+```
+1. u = hash_to_field(msg, 2)
+2. Q0 = map_to_curve(u[0])
+3. Q1 = map_to_curve(u[1])
+4. R = Q0 + Q1
+5. P = clear_cofactor(R)
+```
+
+The design requirements for the `hash_to_field` function are that it should be an indistinguishable random oracle and should prevent information leakage through side-channel attacks, such as timing attacks. In our circuit, we choose to use `expand_message_xmd` and the SHA-2 hash function to ensure a constant running time and avoid timing attacks.
+
+The `map_to_curve` function can use different methods depending on the curve. In our circuit, we choose to use the BN254 curve and employ the [Shallue-van de Woestijne method](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-12#name-shallue-van-de-woestijne-me).
+
+`clear_cofactor` can be implemented by scalar multiplication with `h`. In some cases, the cofactor can be cleared by methods that are faster than the scalar multiplication with `h`. These methods are equivalent to multiplying by some scalar `h_eff` whose value is determined by the method and the curve.
+In the BN254 curve condition, we chose to use the [Lattice-based method](https://cacr.uwaterloo.ca/techreports/2011/cacr2011-26.pdf) to clear the cofactor.
+
+The `bls_signature_aggregate_verify` part of the circuit follows the requirements of section 3.3.4: " FastAggregateVerify" of the [IETF BLS Signature Standard](https://datatracker.ietf.org/doc/draft-irtf-cfrg-bls-signature/05/), which implements BLS signature aggregation and verification based on BN254 curves.
+
+```
+1. aggregate = pubkey_to_point(PK_1)
+2. for i in 2, ..., n:
+3.   next = pubkey_to_point(PK_i)
+4.   aggregate = aggregate + next
+5. PK = point_to_pubkey(aggregate)
+6. return CoreVerify(PK, message, signature)
+```
+
+Based on the above two parts, we have implemented the following rules in the circuit:
+1. Use `validators_hash`, `msg_hash` as public input.
+2. Use each validator's public key `pk`, corresponding `power`, and signature submitted in this round as private inputs. For the validators who did not submit their signatures in this round, we just generate an empty signature to populate the circuit.
+3. Verify the correctness of `pk` and `power` in the circuit: compute `PoseidonHash(validator_pk_1, power_1, validator_pk_2, power_2, ..., validator_pk_1024, power_1024)`, and constrain that the result is equal to public input `validators_hash`.
+4. Set a flag for each validator in the circuit, when a certain flag is 1, it means that the validator has submitted its own signature on `msg_hash` in this round, and 0 is the opposite. Constrain the flags in the circuit to be either 0 or 1.
+5. Multiply the power of all validators and the corresponding flags, and then add them up, constraining the result to be greater than 2/3 of the sum of the power of all validators.
+
+After completing the above validation, we can be confident that each validator's public keys `pk` and corresponding `power` have been set correctly, since their poseidon hash is equal to the publicly passed `validators_hash`. Next, we verify that all validators whose flag is set to 1 have provided the correct BLS signature for `msg_hash`. We then verify that all validators whose flag is set to 1 have signed for `msg_hash`correctly.
+1. Validate `M = hash_to_curve(msg_hash)` in the circuit.
+2. Aggregate all signatures and pick out the correct `pk` and signature by flag: `bls_signature_aggregate_verify(pk_1 * flag_1 + pk_2 * flag_2 + .... , M, signature_1 * flag_1 + signature_2 * flag2...)`
+
+After the above verification, Prover can generate the proof and submit it to the online contract.
 
 ## Tokenomics
 
@@ -140,4 +205,4 @@ However, this does not pose a problem because the older validators have not exit
 
 # Conclusion
 
-In summary, the core of this protocol consists of on-chain smart contracts and off-chain deterministic calculations. The smart contracts govern the protocol and leverage a `zkSNARK Verifier` for efficient verification. The off-chain deterministic calculations are based on on-chain events and off-chain voting. They compute deterministic incentives and the latest validator set for each deterministic interval and update the results to the smart contracts, thereby passing the baton to the next `Epoch`.
+In summary, the core of this protocol consists of on-chain smart contracts and off-chain deterministic calculations and zkSNARK circuit. The smart contracts govern the protocol and leverage a `zkSNARK Verifier` for efficient verification. The off-chain deterministic calculations are based on on-chain events and off-chain voting. They compute deterministic incentives and the latest validator set for each deterministic interval and update the results to the smart contracts, thereby passing the baton to the next `Epoch`. The zkSNARK circuit essentially compresses all signatures into a single succinct proof.
