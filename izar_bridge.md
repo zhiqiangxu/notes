@@ -201,7 +201,7 @@ After the above verification, Prover can generate the proof and submit it to the
 
 ## Tokenomics
 
-(in progress)
+[(in progress)](https://docs.google.com/document/d/1OMGBpzafJnIOqHFkqEDTyMjlwqYF-5-T/edit?usp=sharing&ouid=111371986243331622625&rtpof=true&sd=true)
 
 # Conclusion
 
