@@ -29,7 +29,7 @@ Same bet, same payoff → should pay same fee.
 
 # Order Matching
 
-Three [match types](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/mixins/Trading.sol#L275-L279):
+Three [match types](https://github.com/Polymarket/ctf-exchange/blob/1354de68752a065b7af8c0b004aeba2b16cf25a1/src/exchange/mixins/Trading.sol#L275-L279):
 
 | Type | Orders | Action |
 |------|--------|--------|
@@ -39,8 +39,8 @@ Three [match types](https://github.com/Polymarket/ctf-exchange/blob/main/src/exc
 
 Two functions for trade execution:
 
-1. [`fillOrder`](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/CTFExchange.sol#L61): Operator is counterparty (must hold tokens to trade against user), only supports COMPLEMENTARY
-2. [`matchOrders`](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/CTFExchange.sol#L82): Operator matches users against each other, supports all three match types
+1. [`fillOrder`](https://github.com/Polymarket/ctf-exchange/blob/1354de68752a065b7af8c0b004aeba2b16cf25a1/src/exchange/CTFExchange.sol#L61): Operator is counterparty (must hold tokens to trade against user), only supports COMPLEMENTARY
+2. [`matchOrders`](https://github.com/Polymarket/ctf-exchange/blob/1354de68752a065b7af8c0b004aeba2b16cf25a1/src/exchange/CTFExchange.sol#L82): Operator matches users against each other, supports all three match types
 
 # Fee System
 
