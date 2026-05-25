@@ -14,9 +14,10 @@
 6. [完整计算示例](#六完整计算示例)
 7. [什么是参数，什么不是](#七什么是参数什么不是)
 8. [为什么有效 / 理论依据](#八为什么有效--理论依据)
-9. [Self-Attention vs Cross-Attention](#九self-attention-vs-cross-attention)
-10. [Multi-Head Attention](#十multi-head-attention)
-11. [Attention 与 Transformer 的关系](#十一attention-与-transformer-的关系)
+9. [因果掩码 (Causal Mask)](#九因果掩码-causal-mask)
+10. [Self-Attention vs Cross-Attention](#十self-attention-vs-cross-attention)
+11. [Multi-Head Attention](#十一multi-head-attention)
+12. [Attention 与 Transformer 的关系](#十二attention-与-transformer-的关系)
 
 ---
 
@@ -472,7 +473,79 @@ Vaswani 2017 的论文没有长篇理论推导"为什么 QKV"。消融实验证�
 
 ---
 
-## 九、Self-Attention vs Cross-Attention
+## 九、因果掩码 (Causal Mask)
+
+之前讲 self-attention 时默认每个 token 看到所有 token。但 **GPT 这类生成式模型不能这样**：训练 "I love cats" 时，如果让 "I" 看到后面的 "love cats"，等于直接看了答案——模型只会学到"复制下一个 token"，根本没法生成。
+
+### 解决方案：在 softmax 前加一个掩码矩阵 M
+
+$$\text{scores} = \frac{QK^\top}{\sqrt{d_k}} + M$$
+
+M 是下三角矩阵（n = 序列长度）：
+
+$$M_{ij} = \begin{cases} 0 & j \le i \quad \text{(过去和当前，允许看)} \\ -\infty & j > i \quad \text{(未来，禁止看)} \end{cases}$$
+
+3 个 token 的例子：
+
+```
+M = [[  0, -∞, -∞],
+     [  0,  0, -∞],
+     [  0,  0,  0]]
+```
+
+### 为什么用 -∞？因为 softmax 会把它变成 0
+
+加 -∞ 到分数上，softmax 时 $e^{-\infty} = 0$，那一项的权重就是 **0**。乘到 V 时贡献也是 0——未来 token 被完全屏蔽。
+
+### 完整对照（接第六节 "I love cats" 的例子）
+
+token 1 ("I") 只能看自己：
+
+```
+分数:    [Q("I")·K("I"), -∞, -∞]
+softmax: [1.0, 0, 0]
+输出:    1.0 × V("I") = V("I")
+```
+
+token 2 ("love") 能看 "I" 和自己：
+
+```
+分数:    [Q("love")·K("I"), Q("love")·K("love"), -∞]
+softmax: [0.4, 0.6, 0]     ← 示意值
+输出:    0.4 × V("I") + 0.6 × V("love")
+```
+
+token 3 ("cats") 能看全部（跟第六节原始例子一样）：
+
+```
+softmax: [0.22, 0.32, 0.46]
+输出:    0.22 × V("I") + 0.32 × V("love") + 0.46 × V("cats")
+```
+
+### 为什么这就够训练用
+
+训练时一次性输入整句，但 causal mask 保证：
+
+- 算 token i 的预测时，模型只用了 token 1..i 的信息
+- 每个位置都模拟了"自回归生成"的真实场景
+- **一次 forward 同时算出 N 个位置的损失**——比 RNN 逐 token 训快得多
+
+这就是 GPT 训练高效的关键：用 mask 在并行计算下模拟了串行生成。
+
+### 跟 KV cache 的关系
+
+正因为有 causal mask，才有两个关键性质：
+
+1. **过去 token 的输出不会被未来 token 影响** → 老的 $a_1 \ldots a_n$ 加入新 token 后不变
+2. **新 token 不会改写老 K/V** → K/V 一次算出后永远有效
+
+这两点是 KV cache 能成立的前提。BERT 这种无 mask 的双向模型就**无法** KV cache——加一个 token 整个序列的表示都要重算。
+
+详见 [vllm_kv_cache.md](./vllm_kv_cache.md)。
+
+---
+
+## 十、Self-Attention vs Cross-Attention
 
 | | Q 来自 | K、V 来自 | 场景 |
 |---|---|---|---|
@@ -489,7 +562,7 @@ Cross-attention 例子：翻译 "I love cats" → "我 爱 猫"
 
 ---
 
-## 十、Multi-Head Attention
+## 十一、Multi-Head Attention
 
 一个 attention head 只能学**一种**注意力模式。Multi-head 用 h 组不同的 W_Q/W_K/W_V，各自独立算 attention，最后拼起来：
 
@@ -524,7 +597,7 @@ Concat → [512维]（拼起来）
 
 ---
 
-## 十一、Attention 与 Transformer 的关系
+## 十二、Attention 与 Transformer 的关系
 
 Attention 是**机制**，Transformer 是**用这个机制搭的架构**。
 
